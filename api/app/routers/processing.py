@@ -21,12 +21,14 @@ router = APIRouter()
 @router.post("/processing")
 def send_data_processing_request(processing_request: ProcessingRequest, db: Session = Depends(get_db)):
     """
-    User-facing endpoint.
+    Send a data processing request to the application.
+    
+    A universally unique identifier (UUID) is produced for the processing request
+    and returned to the user. This can be used later to retrieve the results of the
+    data processing.
 
-    1. Take a user processing request
-    2. Assign a uuid
-    3. Send the processing request to the queue
-    4. Return the uuid to the user
+    The processing request is send to the queue, which is consumed by the data 
+    processing service.
     """
 
     uuid_code = str(uuid.uuid4())
@@ -48,13 +50,10 @@ def send_data_processing_request(processing_request: ProcessingRequest, db: Sess
 @router.get("/processing/{uuid}", response_model=ProcessingTask)
 def get_processed_data(uuid: str, db: Session = Depends(get_db)):
     """
-    User-facing endpoint.
+    Retrieve the processed data results from the application, using the UUID code
+    assigned for the specific processing task.
 
-    1. Take the uuid of a processing task
-    2. Check if the processed task results exist in the database
-    3. If they exist, return them to the user
-    4. If they don't exist, return a message telling the user
-       to try again later
+    The resulting processed data is stored under the "data" key in the response JSON.
     """
 
     task = get_task_by_uuid(db, uuid)
@@ -63,11 +62,13 @@ def get_processed_data(uuid: str, db: Session = Depends(get_db)):
 
 
 @router.put("/processing/update", include_in_schema=False, response_model=ProcessingTask)
-def update_task_status(task: ProcessingTaskUpdate, db: Session = Depends(get_db)):
+def update_processing_task(task: ProcessingTaskUpdate, db: Session = Depends(get_db)):
     """
-    Internal use endpoint.
+    Update a processing task in the database.
 
-    Update the status of the data processing task in the database.
+    This endpoint is called internally by the data processing service of the
+    application, and is used to update the task in the database with the results
+    of the data processing.
     """
     
     task = update_task(db, task)
@@ -76,11 +77,9 @@ def update_task_status(task: ProcessingTaskUpdate, db: Session = Depends(get_db)
 
 
 def _format_processing_task_response(task: models.Task) -> ProcessingTask:
-    data = task.data
-    
     return ProcessingTask(
         uuid=task.uuid, 
         process=task.process,
         complete=task.complete,
-        data=data
+        data=task.data
     )

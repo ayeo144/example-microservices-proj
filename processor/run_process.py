@@ -12,6 +12,14 @@ URL = "http://api:8000/processing/update"
 
 
 def callback(ch, method, properties, body):
+    """
+    Callback function for RabbitMQ queue consumer. Takes the body of the message
+    from the queue (a JSON POST request to the API by the user) and performs some
+    data processing.
+    The task is updated with the processed data and a PUT request is made to the API
+    which then updates the task record in the database, allowing the user to access
+    the results of the data processing.
+    """
 
     task = json.loads(body)
 
@@ -21,24 +29,37 @@ def callback(ch, method, properties, body):
     task["complete"] = True
     task["data"] = output_data
 
-    json_data = json.dumps(task)
+    task_json = json.dumps(task)
 
-    response = requests.put(URL, data=json_data, headers={"Content-Type": "application/json"})
+    response = requests.put(URL, data=task_json, headers={"Content-Type": "application/json"})
+
     print(response)
-
     print("Completed!")
 
 
 def process(process_name: str) -> dict:
-    # This is some time-consuming process...
-    time.sleep(5)
+    """
+    An example of a data processing function, that produces some output
+    data from the users original request.
+    """
+    
+    time.sleep(10)
     return {
         "values": list(np.random.rand(10)),
         "description": f"This data was created by {process_name} process."
     }
 
 
-if __name__ == "__main__":
-
+def main():
+    """
+    Connect to the message queue and run the callback function on each new
+    message that arrives.
+    """
+    
     consumer = Consumer()
     consumer.receive(QUEUE_NAME, callback)
+
+
+if __name__ == "__main__":
+
+    main()
