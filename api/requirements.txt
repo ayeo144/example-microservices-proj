@@ -1,0 +1,13 @@
+jupyter
+numpy
+pandas
+pika
+fastapi
+pydantic
+requests
+uvicorn
+sqlalchemy
+sqlalchemy-utils
+psycopg2
+python-jose[cryptography]
+passlib[bcrypt]

@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+
+  rabbit:
+    image: rabbitmq:3-management
+    container_name: rabbit
+    hostname: rabbit
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbit:/var/lib/rabbitmq/mnesia/
+
+  db:
+    image: postgres:14.1-alpine
+    container_name: db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5433:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./api/
+    container_name: api
+    ports:
+      - 8000:8000
+    volumes:
+      - type: bind
+        source: ./
+        target: /mnt/
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: db
+      POSTGRES_DB: tasks_db
+    depends_on:
+      - rabbit
+      - db
+    links:
+      - rabbit:rabbit
+      - db:db
+  
+  data_processing:
+    build:
+      context: ./processor/
+    container_name: data_processing
+    ports:
+      - 8001:8001
+    volumes:
+      - type: bind
+        source: ./
+        target: /mnt/
+    depends_on:
+      - rabbit
+      - api
+    links:
+      - rabbit:rabbit
+      - api:api
+
+volumes:
+  db:
+    driver: local
+  rabbit:
+    driver: local
